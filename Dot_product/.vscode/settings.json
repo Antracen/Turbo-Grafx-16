@@ -1,0 +1,7 @@
+{
+    "terminal.integrated.inheritEnv": false,
+    "terminal.integrated.splitCwd": "initial",
+    "files.associations": {
+        "stdexcept": "cpp"
+    }
+}
