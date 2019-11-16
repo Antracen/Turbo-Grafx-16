@@ -266,41 +266,41 @@ int main(int argc, char **argv) {
     
     /* APPLY A 3x3 GAUSSIAN FILTER */
 
-        // /* CPU VERSION */
-        //     gettimeofday(&t[0], NULL);
-        //     cpu_gaussian(bitmap.width, bitmap.height, image_out[0], image_out[1]);
-        //     gettimeofday(&t[1], NULL);
+        /* CPU VERSION */
+            gettimeofday(&t[0], NULL);
+            cpu_gaussian(bitmap.width, bitmap.height, image_out[0], image_out[1]);
+            gettimeofday(&t[1], NULL);
             
-        //     elapsed_time = get_elapsed(t[0], t[1]);
-        //     store_result(2, elapsed_time, false, bitmap.width, bitmap.height, image_out[1]);
+            elapsed_time = get_elapsed(t[0], t[1]);
+            store_result(2, elapsed_time, false, bitmap.width, bitmap.height, image_out[1]);
         
-        // /* GPU VERSION */
-        //     gettimeofday(&t[0], NULL);
-        //     gpu_gaussian<<<grid, block>>>(bitmap.width, bitmap.height, d_image_out[0], d_image_out[1]);
-        //     cudaMemcpy(image_out[1], d_image_out[1], image_size*sizeof(float), cudaMemcpyDeviceToHost);      
-        //     gettimeofday(&t[1], NULL);
+        /* GPU VERSION */
+            gettimeofday(&t[0], NULL);
+            gpu_gaussian<<<grid, block>>>(bitmap.width, bitmap.height, d_image_out[0], d_image_out[1]);
+            cudaMemcpy(image_out[1], d_image_out[1], image_size*sizeof(float), cudaMemcpyDeviceToHost);      
+            gettimeofday(&t[1], NULL);
 
-        //     elapsed_time = get_elapsed(t[0], t[1]);
-        //     store_result(2, elapsed_time, true, bitmap.width, bitmap.height, image_out[1]);
+            elapsed_time = get_elapsed(t[0], t[1]);
+            store_result(2, elapsed_time, true, bitmap.width, bitmap.height, image_out[1]);
     
     /* APPLY A SOBEL FILTER */
 
-        // /* CPU VERSION */
-        //     gettimeofday(&t[0], NULL);
-        //     cpu_sobel(bitmap.width, bitmap.height, image_out[1], image_out[0]);
-        //     gettimeofday(&t[1], NULL);
+        /* CPU VERSION */
+            gettimeofday(&t[0], NULL);
+            cpu_sobel(bitmap.width, bitmap.height, image_out[1], image_out[0]);
+            gettimeofday(&t[1], NULL);
             
-        //     elapsed_time = get_elapsed(t[0], t[1]);
-        //     store_result(3, elapsed_time, false, bitmap.width, bitmap.height, image_out[0]);
+            elapsed_time = get_elapsed(t[0], t[1]);
+            store_result(3, elapsed_time, false, bitmap.width, bitmap.height, image_out[0]);
         
-        // /* GPU VERSION */
-        //     gettimeofday(&t[0], NULL);
-        //     gpu_sobel<<<grid, block>>>(bitmap.width, bitmap.height, d_image_out[1], d_image_out[0]);
-        //     cudaMemcpy(image_out[0], d_image_out[0], image_size*sizeof(float), cudaMemcpyDeviceToHost);
-        //     gettimeofday(&t[1], NULL);
+        /* GPU VERSION */
+            gettimeofday(&t[0], NULL);
+            gpu_sobel<<<grid, block>>>(bitmap.width, bitmap.height, d_image_out[1], d_image_out[0]);
+            cudaMemcpy(image_out[0], d_image_out[0], image_size*sizeof(float), cudaMemcpyDeviceToHost);
+            gettimeofday(&t[1], NULL);
 
-        //     elapsed_time = get_elapsed(t[0], t[1]);
-        //     store_result(3, elapsed_time, true, bitmap.width, bitmap.height, image_out[0]);
+            elapsed_time = get_elapsed(t[0], t[1]);
+            store_result(3, elapsed_time, true, bitmap.width, bitmap.height, image_out[0]);
         
     /* CLEAN UP EVERYTHING */
         for (int i = 0; i < 2; i++) {
