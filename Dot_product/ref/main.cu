@@ -1,9 +1,16 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/time.h>
 
-#define N 1024
-#define TPB 64
+#define N 10000000
+#define TPB 256
 #define ATOMIC 1 // 0 for non-atomic addition
+
+double cpuSecond() {
+	struct timeval tp;
+	gettimeofday(&tp, NULL);
+	return ((double)tp.tv_sec + (double)tp.tv_usec*1.e-6);
+}
 
 __global__
 void dotKernel(int *d_res, const int *d_a, const int *d_b, int n) {
@@ -20,7 +27,7 @@ void dotKernel(int *d_res, const int *d_a, const int *d_b, int n) {
     for (int j = 0; j < blockDim.x; ++j) {
       blockSum += s_prod[j];
     }
-    printf("Block_%d, blockSum = %d\n", blockIdx.x, blockSum);
+    // printf("Block_%d, blockSum = %d\n", blockIdx.x, blockSum);
     // Try each of two versions of adding to the accumulator
     if (ATOMIC) {
       atomicAdd(d_res, blockSum);
@@ -64,12 +71,17 @@ int main() {
     a[i] = 1;    
     b[i] = 1;  
   }  
+
+	double t = cpuSecond();
   for (int i = 0; i < N; ++i) {    
     cpu_res += a[i] * b[i];  
   }  
-  printf("cpu result = %d\n", cpu_res);  
+	t = cpuSecond() - t;
+  printf("cpu result = %f\n", t);  
+	t = cpuSecond();
   int gpu_res = dotLauncher(a, b, N);  
-  printf("gpu result = %d\n", gpu_res);  
+	t = cpuSecond() - t;
+  printf("gpu result = %f\n", t);  
   free(a);  
   free(b);  
   return 0;

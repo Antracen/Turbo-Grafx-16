@@ -63,4 +63,11 @@ using std::abs;
     void detailed_print_float(float x) {
         cout << std::setprecision(10) << x << endl;
     }
+
+    inline void checkCuda(cudaError_t result) {
+        if(result != cudaSuccess) {
+            fprintf(stderr, "CUDA Runtime Error: %s\n", cudaGetErrorString(result));
+            assert(result == cudaSuccess);
+        }
+    }
 #endif
