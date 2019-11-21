@@ -121,7 +121,7 @@ __global__ void gpu_gaussian(int width, int height, float *image, float *image_o
     
     if(index_x < (width - 2) && index_y < (height - 2)) {
         int offset   = (index_y + 1) * width + (index_x + 1);
-        int thread_id_block = (threadIdx.y + 1)*BLOCK_SIZE_SH + (threadIdx.x + 1);
+        int thread_id_block = (threadIdx.y)*BLOCK_SIZE_SH + (threadIdx.x);
 
         sh_block[thread_id_block] = image[thread_id];
 
@@ -132,7 +132,7 @@ __global__ void gpu_gaussian(int width, int height, float *image, float *image_o
         if(threadIdx.x == BLOCK_SIZE-1 || threadIdx.x == BLOCK_SIZE-2) 
             sh_block[thread_id_block + 2] = image[thread_id + 2];
         // CORNER BOTTOM RIGHT
-        if((threadIdx.y == BLOCK_SIZE-1 || threadIdx.y == BLOCK_SIZE-2) || (threadIdx.x == BLOCK_SIZE-1 || threadIdx.x == BLOCK_SIZE-2))
+        if((threadIdx.y == BLOCK_SIZE-1 || threadIdx.y == BLOCK_SIZE-2) && (threadIdx.x == BLOCK_SIZE-1 || threadIdx.x == BLOCK_SIZE-2))
             sh_block[thread_id_block + 2*BLOCK_SIZE_SH + 2] = image[thread_id + 2*width + 2];
 
         image_out[offset] = gpu_applyFilter(&sh_block[thread_id_block], BLOCK_SIZE_SH, gaussian, 3);
@@ -144,8 +144,12 @@ __global__ void gpu_gaussian(int width, int height, float *image, float *image_o
  */
 void cpu_sobel(int width, int height, float *image, float *image_out) {
     
-    float sobel_x[9] = { 1.0f, 0.0f, -1.0f, 2.0f, 0.0f, -2.0f, 1.0f,  0.0f, -1.0f };
-    float sobel_y[9] = { 1.0f, 2.0f, 1.0f, 0.0f, 0.0f, 0.0f, -1.0f, -2.0f, -1.0f };
+    float sobel_x[9] = { 1.0f, 0.0f, -1.0f, 
+						2.0f, 0.0f, -2.0f, 
+						1.0f,  0.0f, -1.0f };
+    float sobel_y[9] = { 1.0f, 2.0f, 1.0f, 
+						0.0f, 0.0f, 0.0f, 
+						-1.0f, -2.0f, -1.0f };
     
     for (int h = 0; h < (height - 2); h++) {
         int offset_t = h * width;
@@ -182,7 +186,7 @@ __global__ void gpu_sobel(int width, int height, float *image, float *image_out)
         
     if (index_x < (width - 2) && index_y < (height - 2)) {
         int offset   = (index_y + 1) * width + (index_x + 1);
-        int thread_id_block = (threadIdx.y + 1)*BLOCK_SIZE_SH + (threadIdx.x + 1);
+        int thread_id_block = (threadIdx.y)*BLOCK_SIZE_SH + (threadIdx.x);
 
         sh_block[thread_id_block] = image[thread_id];
 
@@ -193,7 +197,7 @@ __global__ void gpu_sobel(int width, int height, float *image, float *image_out)
         if(threadIdx.x == BLOCK_SIZE-1 || threadIdx.x == BLOCK_SIZE-2) 
             sh_block[thread_id_block + 2] = image[thread_id + 2];
         // CORNER BOTTOM RIGHT
-        if((threadIdx.y == BLOCK_SIZE-1 || threadIdx.y == BLOCK_SIZE-2) || (threadIdx.x == BLOCK_SIZE-1 || threadIdx.x == BLOCK_SIZE-2))
+        if((threadIdx.y == BLOCK_SIZE-1 || threadIdx.y == BLOCK_SIZE-2) && (threadIdx.x == BLOCK_SIZE-1 || threadIdx.x == BLOCK_SIZE-2))
             sh_block[thread_id_block + 2*BLOCK_SIZE_SH + 2] = image[thread_id + 2*width + 2];
         
         float gx = gpu_applyFilter(&sh_block[thread_id_block], BLOCK_SIZE_SH, sobel_x, 3);

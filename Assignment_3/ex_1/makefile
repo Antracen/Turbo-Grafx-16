@@ -3,6 +3,9 @@ edge:
 
 run:
 	optirun ./hw3_ex1.out ./images/hw3.bmp
+	optirun ./hw3_ex1.out ./images/hk.bmp
+	optirun ./hw3_ex1.out ./images/nyc.bmp
+	optirun ./hw3_ex1.out ./images/rome.bmp
 
 display:
 	# display -resize 1280x720 images/hw3_result_1.bmp

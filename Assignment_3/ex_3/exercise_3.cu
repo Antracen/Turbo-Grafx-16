@@ -10,6 +10,8 @@
 #define TILE_SIZE 16
 #endif
 
+#define PLOTTING
+
 #define THRESHOLD 1e-3
 
 /* CUDA layout */
@@ -90,7 +92,13 @@ void cpu_sgemm(float *C, float *A, float *B, long size)
 
 	gettimeofday(&t1, NULL);
 
+	#ifndef PLOTTING
 	printf("CPU matmul:\t\t\t%f ms\n", elapsed(t0, t1));
+	#endif
+
+	#ifdef PLOTTING 
+		printf(" %f", elapsed(t0,t1));
+	#endif
 }
 
 /* matmul kernel with global memory */
@@ -121,7 +129,13 @@ void naive_sgemm(float *C, float *A, float *B, long size)
 	checkCudaErrors(cudaDeviceSynchronize());
 	gettimeofday(&t1, NULL);
 
+	#ifndef PLOTTING
 	printf("GPU matmul (global memory):\t%f ms\n", elapsed(t0, t1));
+	#endif
+
+	#ifdef PLOTTING 
+		printf(" %f", elapsed(t0,t1));
+	#endif
 }
 
 /* matmul kernel with shared memory */
@@ -133,6 +147,8 @@ void shared_sgemm_kernel(float *C, float *A, float *B, long size)
 	float val = 0.0;
 
 	/* TODO declare shared memory with size TILE_SIZE x TILE_SIZE */
+	__shared__ float tile_A[TILE_SIZE][TILE_SIZE];
+	__shared__ float tile_B[TILE_SIZE][TILE_SIZE];
 
 	if (col < size && row < size) {
 		const long local_col = blockIdx.x * TILE_SIZE + threadIdx.x;
@@ -146,6 +162,7 @@ void shared_sgemm_kernel(float *C, float *A, float *B, long size)
 			/* TODO introduce a pragma directive that can potentially improve performance here */
 			for (long k = 0; k < TILE_SIZE; ++k) {
 				/* TODO Perform multiplication here */
+				val += tile_A[threadIdx.y][k] * tile_B[k][threadIdx.x];
 			}
 			__syncthreads();
 		}
@@ -164,7 +181,13 @@ void shared_sgemm(float *C, float *A, float *B, long size)
 	checkCudaErrors(cudaDeviceSynchronize());
 	gettimeofday(&t1, NULL);
 
+	#ifndef PLOTTING
 	printf("GPU matmul (shared memory):\t%f ms\n", elapsed(t0, t1));
+	#endif
+
+	#ifdef PLOTTING 
+		printf(" %f\n", elapsed(t0,t1));
+	#endif
 }
 
 /* cuBLAS */
@@ -179,12 +202,18 @@ void cublas_sgemm(float *C, float *A, float *B, long size)
 
 	gettimeofday(&t0, NULL);
 	/* TODO fill in the blanks, do C = BA instead of C = AB */
-	cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, , , , , , , , , , , );
+	cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, size, size, size, &alpha, B, size, A, size, &beta, C, size);
 	checkCudaErrors(cudaDeviceSynchronize());
 	gettimeofday(&t1, NULL);
 	cublasDestroy(handle);
 
+	#ifndef PLOTTING
 	printf("GPU cuBLAS matmul:\t\t%f ms\n", elapsed(t0, t1));
+	#endif
+
+	#ifdef PLOTTING 
+		printf(" %f", elapsed(t0,t1));
+	#endif
 }
 
 void print_usage(char *program)
@@ -209,7 +238,12 @@ int main(int argc, char *argv[])
 				break;
 			case 'v':
 				verify = true;
+				#ifndef PLOTTING
 				printf("Matrix size: %ldx%ld\n", size, size);
+				#endif
+				#ifdef PLOTTING
+				printf("%ld", size);
+				#endif
 				break;
 			default:
 				print_usage(argv[0]);
@@ -219,10 +253,12 @@ int main(int argc, char *argv[])
 
 	grid = dim3(((size + (TILE_SIZE - 1)) / TILE_SIZE), ((size + (TILE_SIZE - 1)) / TILE_SIZE));
 
+	#ifndef PLOTTING
 	printf("Matrix size: %ldx%ld\n", size, size);
 	printf("Grid size: %ux%u\n", grid.x, grid.y);
 	printf("Tile size: %ux%u\n", TILE_SIZE, TILE_SIZE);
 	printf("Run CPU sgemm: %d\n\n", verify);
+	#endif
 
 	float *A = (float*)malloc(sizeof(float)*size*size);
 	float *B = (float*)malloc(sizeof(float)*size*size);
