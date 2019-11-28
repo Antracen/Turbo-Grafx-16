@@ -1,2 +1,5 @@
 *.out
-Assignment_3/ex_1/
+*.e
+*.nc
+Assignment_3/ex_1/images
+*.o
