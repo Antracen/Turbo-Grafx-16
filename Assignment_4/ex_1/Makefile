@@ -26,3 +26,4 @@ clean:
 	rm -f $(OBJ) $(BIN)/$(TARGET)
 
 #pgc++ -I/include -O3 -acc -ta=tesla:cc3x,nvidia,lineinfo,debug -Minfo=accel -o miniWeather_mpi_openacc.out miniWeather_mpi_openacc.cpp /cfs/klemming/nobackup/w/wdchien/tegner_local/lib/libpnetcdf.a -I/cfs/klemming/nobackup/w/wdchien/tegner_local/include -I/pdc/vol/openmpi/3.0/gcc/6.2.0/include -lpthread -Wl,-rpath -Wl,/pdc/vol/openmpi/3.0/gcc/6.2.0/lib -Wl,--enable-new-dtags -L/pdc/vol/openmpi/3.0/gcc/6.2.0/lib -lmpi -g
+

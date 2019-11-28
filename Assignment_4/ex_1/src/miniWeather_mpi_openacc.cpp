@@ -123,7 +123,7 @@ int main(int argc, char **argv) {
   //So, you'll want to have nx_glob be twice as large as nz_glob
   nx_glob = 400;      //Number of total cells in the x-dirction
   nz_glob = 200;      //Number of total cells in the z-dirction
-  sim_time = 1500;     //How many seconds to run the simulation
+  sim_time = 150;     //How many seconds to run the simulation
   output_freq = 10;   //How frequently to output data to file (in seconds)
   //Model setup: DATA_SPEC_THERMAL or DATA_SPEC_COLLISION
   data_spec_int = DATA_SPEC_INJECTION;
@@ -213,6 +213,11 @@ void semi_discrete_step( double *state_init , double *state_forcing , double *st
   }
 
   //Apply the tendencies to the fluid state
+  #pragma acc parallel loop collapse(3) \
+   copyin(state_init[(hs*(nx+2*hs)):((NUM_VARS-1)*(nz+2*hs)*(nx+2*hs)+((nz-1)+hs)*(nx+2*hs) + (nx-1)+hs)]) \
+   copyin(tend[0:((NUM_VARS-1)*nz*nx + (nz-1)*nx + (nx-1))]) \
+   copyout(state_out[(hs*(nx+2*hs)):((NUM_VARS-1)*(nz+2*hs)*(nx+2*hs)+((nz-1)+hs)*(nx+2*hs) + (nx-1)+hs)]) \
+   private(inds, indt)
   for (ll=0; ll<NUM_VARS; ll++) {
     for (k=0; k<nz; k++) {
       for (i=0; i<nx; i++) {
@@ -235,8 +240,12 @@ void compute_tendencies_x( double *state , double *flux , double *tend ) {
   //Compute the hyperviscosity coeficient
   hv_coef = -hv_beta * dx / (16*dt);
   //Compute fluxes in the x-direction for each cell
-  for (k=0; k<nz; k++) {
-    for (i=0; i<nx+1; i++) {
+  #pragma acc parallel loop collapse(2) \
+  	copyin(state[(hs*(nx+2*hs)):((NUM_VARS-1)*(nz+2*hs)*(nx+2*hs)+((nz-1)+hs)*(nx+2*hs)+(nx-1)+hs)]) \
+	copyout(flux[0:(3*(nz+1)*(nx+1) + (nz-1)*(nx+1) + (nx))]) \
+	private(inds, stencil, vals, d3_vals, r,u,w,t,p)
+  for(k=0; k<nz; k++) {
+	for(i=0; i<nx+1; i++) {
       //Use fourth-order interpolation from four cell averages to compute the value at the interface in question
       for (ll=0; ll<NUM_VARS; ll++) {
         for (s=0; s < sten_size; s++) {
@@ -261,11 +270,15 @@ void compute_tendencies_x( double *state , double *flux , double *tend ) {
       flux[ID_UMOM*(nz+1)*(nx+1) + k*(nx+1) + i] = r*u*u+p - hv_coef*d3_vals[ID_UMOM];
       flux[ID_WMOM*(nz+1)*(nx+1) + k*(nx+1) + i] = r*u*w   - hv_coef*d3_vals[ID_WMOM];
       flux[ID_RHOT*(nz+1)*(nx+1) + k*(nx+1) + i] = r*u*t   - hv_coef*d3_vals[ID_RHOT];
-    }
+	}
   }
 
   //Use the fluxes to compute tendencies for each cell
-  for (ll=0; ll<NUM_VARS; ll++) {
+  #pragma acc parallel loop collapse(3) \
+		copyin(flux[0:((NUM_VARS-1)*(nz+1)*(nx+1) + (nz-1)*(nx+1) + (nx-1)+1)]) \
+		copyout(tend[0:((NUM_VARS-1)*nz*nx + (nz-1)*nx + (nx-1))]) \
+		private(indt, indf1, indf2)
+  for(ll=0; ll<NUM_VARS; ll++) {
     for (k=0; k<nz; k++) {
       for (i=0; i<nx; i++) {
         indt  = ll* nz   * nx    + k* nx    + i  ;
@@ -826,3 +839,4 @@ void finalize() {
   free( recvbuf_r );
   ierr = MPI_Finalize();
 }
+
