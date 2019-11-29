@@ -16,7 +16,13 @@
 #define FLUX_SIZE (nx+1)*(nz+1)*NUM_VARS
 #define TEND_SIZE nx*nz*NUM_VARS
 #define SENDBUF_SIZE hs*nz*NUM_VARS
-#define HYDENS_SIZE (nz+2*hs)
+#define RECVBUF_SIZE hs*nz*NUM_VARS
+#define HYDENSCELL_SIZE (nz+2*hs)
+#define HYDENSTHETACELL_SIZE (nz+2*hs)
+#define HYDENSINT_SIZE (nz+1)
+#define HYDENSTHETAINT_SIZE (nz+1)
+#define HYPRESSUREINT_SIZE (nz+1)
+
 
 
 const double pi        = 3.14159265358979323846264338327;   //Pi
@@ -148,11 +154,28 @@ int main(int argc, char **argv) {
   ////////////////////////////////////////////////////
   // MAIN TIME STEP LOOP
   ////////////////////////////////////////////////////
+  /*
+      Create the arrays "flux", "tend" and "state_tmp" on the device. They never need to leave the device
+      Copy in the values of "hy_dens_cell" and "hy_dens_theta_cell" which were set in "init" function 
+  */
+  #pragma acc data \
+              create(flux[0:FLUX_SIZE], tend[0:TEND_SIZE], state_tmp[0:STATE_SIZE]) \
+              copyin(hy_dens_cell[0:HYDENSCELL_SIZE], hy_dens_theta_cell[0:HYDENSTHETACELL_SIZE], hy_dens_int[0:HYDENSINT_SIZE], hy_dens_theta_int[0:HYDENSTHETAINT_SIZE], hy_pressure_int[0:HYPRESSUREINT_SIZE])
   while (etime < sim_time) {
     //If the time step leads to exceeding the simulation time, shorten it for the last step
     if (etime + dt > sim_time) { dt = sim_time - etime; }
+    
     //Perform a single time step
-    perform_timestep(state,state_tmp,flux,tend,dt);
+    /*
+        The array "state" needs to be copied out of the device every timestep so that it can be used in function "output"
+        TODO: Is it enough with just copyout?
+    */
+    #pragma acc data \
+                copy(state[0:STATE_SIZE])
+    {
+      perform_timestep(state,state_tmp,flux,tend,dt);
+    }
+    
     //Inform the user
     if (masterproc) { printf( "Elapsed Time: %lf / %lf\n", etime , sim_time ); }
     //Update the elapsed time and output counter
@@ -219,11 +242,13 @@ void semi_discrete_step( double *state_init , double *state_forcing , double *st
   }
 
   //Apply the tendencies to the fluid state
-  #pragma acc parallel loop collapse(3) \
-   copyin(state_init[0:STATE_SIZE]) \
-   copyin(tend[0:TEND_SIZE]) \
-   copyout(state_out[STATE_SIZE]) \
-   private(inds, indt)
+  /*
+    The parallel region uses the existing "state_out", "state_init" and "tend". We can collapse the loops since they are tightly nested
+  */
+  #pragma acc parallel loop \
+              collapse(3) \
+              present(state_out, state_init, tend) \
+              private(inds, indt)
   for (ll=0; ll<NUM_VARS; ll++) {
     for (k=0; k<nz; k++) {
       for (i=0; i<nx; i++) {
@@ -246,15 +271,19 @@ void compute_tendencies_x( double *state , double *flux , double *tend ) {
   //Compute the hyperviscosity coeficient
   hv_coef = -hv_beta * dx / (16*dt);
   //Compute fluxes in the x-direction for each cell
-  #pragma acc parallel loop collapse(2) \
-   copyin(state[0:STATE_SIZE]) \
-   copyout(flux[0:FLUX_SIZE]) \
-   private(inds, stencil, vals, d3_vals, r,u,w,t,p)
+  /*
+      Collapse loops, use present "state" and "flux"
+  */
+  #pragma acc parallel loop \
+              collapse(2) \
+              present(state, hy_dens_cell, hy_dens_theta_cell, flux) \
+              private(inds, stencil, vals, d3_vals, r,u,w,t,p)
   for(k=0; k<nz; k++) {
 	 for(i=0; i<nx+1; i++) {
       //Use fourth-order interpolation from four cell averages to compute the value at the interface in question
-      for (ll=0; ll<NUM_VARS; ll++) {
-        for (s=0; s < sten_size; s++) {
+      #pragma acc loop // Split the work
+      for(ll=0; ll<NUM_VARS; ll++) {
+        for(s=0; s < sten_size; s++) {
           inds = ll*(nz+2*hs)*(nx+2*hs) + (k+hs)*(nx+2*hs) + i+s;
           stencil[s] = state[inds];
         }
@@ -280,10 +309,13 @@ void compute_tendencies_x( double *state , double *flux , double *tend ) {
   }
 
   //Use the fluxes to compute tendencies for each cell
-  #pragma acc parallel loop collapse(3) \
-  copyin(flux[0:FLUX_SIZE]) \
-  copyout(tend[0:TEND_SIZE]) \
-  private(indt, indf1, indf2)
+  /*
+    Collapse the loop, use present "flux" and "tend"
+  */
+  #pragma acc parallel loop \
+              collapse(3) \
+              present(flux, tend) \
+              private(indt, indf1, indf2)
   for(ll=0; ll<NUM_VARS; ll++) {
     for (k=0; k<nz; k++) {
       for (i=0; i<nx; i++) {
@@ -307,10 +339,13 @@ void compute_tendencies_z( double *state , double *flux , double *tend ) {
   //Compute the hyperviscosity coeficient
   hv_coef = -hv_beta * dx / (16*dt);
   //Compute fluxes in the x-direction for each cell
-  #pragma acc parallel loop collapse(2) \
-   copyin(state[0:STATE_SIZE]) \
-    copyout(flux[0:FLUX_SIZE]) \
-    private(inds, stencil, vals, d3_vals, r,u,w,t,p)
+  /*
+    Collapse loop, use present "flux" and "state"
+  */
+  #pragma acc parallel loop \
+              collapse(2) \
+              present(state, flux, hy_dens_int, hy_dens_theta_int, hy_pressure_int) \
+              private(inds, stencil, vals, d3_vals, r,u,w,t,p)
   for (k=0; k<nz+1; k++) {
     for (i=0; i<nx; i++) {
       //Use fourth-order interpolation from four cell averages to compute the value at the interface in question
@@ -341,11 +376,12 @@ void compute_tendencies_z( double *state , double *flux , double *tend ) {
   }
 
   //Use the fluxes to compute tendencies for each cell
-  #pragma acc parallel loop collapse(3) \
-  copyin(flux[0:FLUX_SIZE]) \
-  copyout(tend[0:TEND_SIZE]) \
-  copyin(state[0:STATE_SIZE]) \
-  private(indt, indf1, indf2)
+  #pragma acc parallel loop \
+              collapse(3) \
+              present(flux) \
+              present(tend) \
+              present(state) \
+              private(indt, indf1, indf2)
   for (ll=0; ll<NUM_VARS; ll++) {
     for (k=0; k<nz; k++) {
       for (i=0; i<nx; i++) {
@@ -374,10 +410,14 @@ void set_halo_values_x( double *state ) {
   ierr = MPI_Irecv(recvbuf_r,hs*nz*NUM_VARS,MPI_DOUBLE,right_rank,1,MPI_COMM_WORLD,&req_r[1]);
 
   //Pack the send buffers
-  #pragma acc parallel loop collapse(3) \
-  copyin(state[0:STATE_SIZE]) \
-  copyout(sendbuf_l[0:SENDBUF_SIZE]) \
-    copyout(sendbuf_r[0:SENDBUF_SIZE])
+  /*
+      Copy out "sendbuf_l" and "sendbuf_r" since they are used in the MPI_Isend
+  */
+  #pragma acc parallel loop \
+              collapse(3) \
+              present(state) \
+              copyout(sendbuf_l[0:SENDBUF_SIZE]) \
+              copyout(sendbuf_r[0:SENDBUF_SIZE])
   for (ll=0; ll<NUM_VARS; ll++) {
     for (k=0; k<nz; k++) {
       for (s=0; s<hs; s++) {
@@ -397,6 +437,11 @@ void set_halo_values_x( double *state ) {
 
 
   //Unpack the receive buffers
+  #pragma acc parallel loop \
+              collapse(3) \
+              present(state) \
+              copyin(recvbuf_l[0:RECVBUF_SIZE]) \
+              copyin(recvbuf_r[0:RECVBUF_SIZE])
   for (ll=0; ll<NUM_VARS; ll++) {
     for (k=0; k<nz; k++) {
       for (s=0; s<hs; s++) {
@@ -411,10 +456,11 @@ void set_halo_values_x( double *state ) {
 
   if (data_spec_int == DATA_SPEC_INJECTION) {
     if (myrank == 0) {
-      #pragma acc parallel loop collapse(2) \
-        copy(state[0:STATE_SIZE]) \
-        copyin(hy_dens_cell[0:HYDENS_SIZE]) \
-        copyin(hy_dens_theta_cell[0:HYDENS_SIZE])
+      #pragma acc parallel loop \
+                  collapse(2) \
+                  present(state) \
+                  present(hy_dens_cell) \
+                  present(hy_dens_theta_cell)
       for (k=0; k<nz; k++) {
         for (i=0; i<hs; i++) {
           z = (k_beg + k+0.5)*dz;
@@ -439,7 +485,7 @@ void set_halo_values_z( double *state ) {
   const double mnt_width = xlen/8;
   double       x, xloc, mnt_deriv;
   #pragma acc parallel loop collapse(2) \
-  copyout(state[0:STATE_SIZE])
+              present(state)
   for (ll=0; ll<NUM_VARS; ll++) {
     for (i=0; i<nx+2*hs; i++) {
       if (ll == ID_WMOM) {
