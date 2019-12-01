@@ -157,7 +157,11 @@ int main(int argc, char **argv) {
   //Output the initial state
   output(state,etime);
 
-  // @wass
+  /*
+		@wass
+		Create some variables which will be used in the kernels on the device
+    Copy in the existing values of variables initialised in the "init" function
+  */
   #pragma acc data \
               create(state_tmp[0:STATE_SIZE], flux[0:FLUX_SIZE], tend[0:TEND_SIZE], sendbuf_l[0:SENDBUF_SIZE], sendbuf_r[0:SENDBUF_SIZE], recvbuf_l[0:RECVBUF_SIZE], recvbuf_r[0:RECVBUF_SIZE]) \
               copyin(state[0:STATE_SIZE], hy_dens_cell[0:HYDENSCELL_SIZE], hy_dens_theta_cell[0:HYDENSTHETACELL_SIZE], hy_dens_int[0:HYDENSINT_SIZE], hy_dens_theta_int[0:HYDENSTHETAINT_SIZE], hy_pressure_int[0:HYPRESSUREINT_SIZE])
@@ -171,6 +175,7 @@ int main(int argc, char **argv) {
     //Perform a single time step
     perform_timestep(state,state_tmp,flux,tend,dt);
 
+    // @wass update the host values of "state" so they can be used in the "output" function
     #pragma acc update host(state[0:STATE_SIZE])
 
     //Inform the user
@@ -239,7 +244,13 @@ void semi_discrete_step( double *state_init , double *state_forcing , double *st
   }
 
   //Apply the tendencies to the fluid state
-  // @wass: I added this pragma to parallelise the loop. Problem: state_out and state_init sometimes are the same
+  /*
+		@wass
+		Parallelise the loop
+    Collapse the three tightly nested loops into a single loop
+    Utilise present variables
+    Make sure variables in loops are private
+  */
   #pragma acc parallel loop \
               collapse(3) \
               private(inds, indt) \
@@ -266,7 +277,13 @@ void compute_tendencies_x( double *state , double *flux , double *tend ) {
   //Compute the hyperviscosity coeficient
   hv_coef = -hv_beta * dx / (16*dt);
   //Compute fluxes in the x-direction for each cell
-  // @wass: I added this pragma to parallelise the loop. Question: Why do I not need to copy in non-array variables
+  /*
+		@wass
+		Parallelise the loop
+    Collapse the three tightly nested loops into a single loop
+    Utilise present variables
+    Make sure variables in loops are private
+  */
   #pragma acc parallel loop \
               collapse(2) \
               private(ll, s, inds, stencil, vals, d3_vals, r, u, w, t, p) \
@@ -301,7 +318,13 @@ void compute_tendencies_x( double *state , double *flux , double *tend ) {
   }
 
   //Use the fluxes to compute tendencies for each cell
-  // @wass: I added this pragma to parallelise the loop.
+  /*
+		@wass
+		Parallelise the loop
+    Collapse the three tightly nested loops into a single loop
+    Utilise present variables
+    Make sure variables in loops are private
+  */
   #pragma acc parallel loop \
               collapse(3) \
               private(indt, indf1, indf2) \
@@ -329,7 +352,13 @@ void compute_tendencies_z( double *state , double *flux , double *tend ) {
   //Compute the hyperviscosity coeficient
   hv_coef = -hv_beta * dx / (16*dt);
   //Compute fluxes in the x-direction for each cell
-  // @wass: I added this pragma to parallelise the loop. Question: Why do I not need to copy in non-array variables
+  /*
+		@wass
+		Parallelise the loop
+    Collapse the three tightly nested loops into a single loop
+    Utilise present variables
+    Make sure variables in loops are private
+  */
   #pragma acc parallel loop \
               collapse(2) \
               private(ll, s, inds, stencil, vals, d3_vals, r, u, w, t, p) \
@@ -364,7 +393,13 @@ void compute_tendencies_z( double *state , double *flux , double *tend ) {
   }
 
   //Use the fluxes to compute tendencies for each cell
-  // @wass: I added this pragma to parallelise the loop.
+  /*
+		@wass
+		Parallelise the loop
+    Collapse the three tightly nested loops into a single loop
+    Utilise present variables
+    Make sure variables in loops are private
+  */
   #pragma acc parallel loop \
               collapse(3) \
               private(indt, indf1, indf2) \
@@ -397,7 +432,12 @@ void set_halo_values_x( double *state ) {
   ierr = MPI_Irecv(recvbuf_r,hs*nz*NUM_VARS,MPI_DOUBLE,right_rank,1,MPI_COMM_WORLD,&req_r[1]);
 
   //Pack the send buffers
-  // @wass: I added this pragma to parallelise the loop.
+  /*
+		@wass
+		Parallelise the loop
+    Collapse the three tightly nested loops into a single loop
+    Utilise present variables
+  */
   #pragma acc parallel loop \
               collapse(3) \
               present(state, sendbuf_l, sendbuf_r)
@@ -410,6 +450,7 @@ void set_halo_values_x( double *state ) {
     }
   }
 
+  // @wass update host "sendbuf" variables before sending
   #pragma acc update host(sendbuf_l[0:SENDBUF_SIZE], sendbuf_r[0:SENDBUF_SIZE])
 
 
@@ -420,10 +461,16 @@ void set_halo_values_x( double *state ) {
   //Wait for receives to finish
   ierr = MPI_Waitall(2,req_r,MPI_STATUSES_IGNORE);
 
+  // @wass update device "recvbuf" variables with the received data before using in kernel
   #pragma acc update device(recvbuf_l[0:RECVBUF_SIZE], recvbuf_r[0:RECVBUF_SIZE])
 
   //Unpack the receive buffers
-  // @wass: I added this pragma to parallelise the loop. Problem: not all of state should be in copyout
+  /*
+		@wass
+		Parallelise the loop
+    Collapse the three tightly nested loops into a single loop
+    Utilise present variables
+  */
   #pragma acc parallel loop \
               collapse(3) \
               present(state, recvbuf_l, recvbuf_r)
@@ -442,7 +489,13 @@ void set_halo_values_x( double *state ) {
 
   if (data_spec_int == DATA_SPEC_INJECTION) {
     if (myrank == 0) {
-      // @wass: I added this pragma to parallelise the loop. Problem: state uses itself when calculating.
+      /*
+        @wass
+        Parallelise the loop
+        Collapse the three tightly nested loops into a single loop
+        Utilise present variables
+        Make sure variables in loops are private
+      */
       #pragma acc parallel loop \
                   collapse(2) \
                   private(ind_r, ind_u, ind_t) \
@@ -470,7 +523,13 @@ void set_halo_values_z( double *state ) {
   int          i, ll;
   const double mnt_width = xlen/8;
   double       x, xloc, mnt_deriv;
-  // @wass: I added this pragma to parallelise the loop. Problem: state 
+  /*
+		@wass
+		Parallelise the loop
+    Collapse the three tightly nested loops into a single loop
+    Utilise present variables
+    Make sure variables in loops are private
+  */
   #pragma acc parallel loop \
               collapse(2) \
               private(x, xloc, mnt_deriv) \

@@ -1,0 +1,37 @@
+Time(%)      Time     Calls       Avg       Min       Max  Name
+GPU activities:   
+ 30.21%  209.189s    792000  264.13us     927ns  486.62us  [CUDA memcpy HtoD]
+ 28.31%  195.981s    765000  256.18us  1.1510us  464.16us  [CUDA memcpy DtoH]
+ 16.10%  111.446s     27000  4.1276ms  3.8022ms  4.2818ms  compute_tendencies_z(...)_329_gpu
+ 15.38%  106.512s     27000  3.9449ms  3.5966ms  4.1517ms  compute_tendencies_x(...)_266_gpu
+  3.35%  23.2217s     27000  860.06us  855.17us  988.86us  compute_tendencies_z(...)_364_gpu
+  3.26%  22.6037s     54000  418.59us  415.46us  420.99us  semi_discrete_step(...)_239_gpu
+  3.22%  22.3040s     27000  826.07us  810.02us  1.0829ms  compute_tendencies_x(...)_301_gpu
+  0.05%  338.25ms     27000  12.527us  11.167us  13.535us  set_halo_values_x(...)_396_gpu
+  0.04%  276.06ms     27000  10.224us  8.1270us  11.167us  set_halo_values_z(...)_466_gpu
+  0.04%  262.73ms     27000  9.7300us  8.4150us  10.912us  set_halo_values_x(...)_419_gpu
+  0.03%  213.59ms     27000  7.9100us  5.2150us  8.5120us  set_halo_values_x(...)_438_gpu
+
+API calls:   
+95.29%  613.170s    837000  732.58us     923ns  4.9681ms  cuStreamSynchronize
+ 2.54%  16.3414s    929996  17.571us     411ns  1.0123ms  cuEventSynchronize
+ 0.78%  5.01946s    792000  6.3370us  3.0540us  22.095ms  cuMemcpyHtoDAsync
+ 0.59%  3.81448s    765000  4.9860us  2.8910us  480.83us  cuMemcpyDtoHAsync
+ 0.51%  3.25756s    270000  12.065us  9.4900us  5.7258ms  cuLaunchKernel
+ 0.27%  1.74164s    929998  1.8720us  1.2010us  464.31us  cuEventRecord
+ 0.01%  85.920ms         1  85.920ms  85.920ms  85.920ms  cuCtxCreate
+ 0.00%  31.000ms         1  31.000ms  31.000ms  31.000ms  cuMemHostAlloc
+ 0.00%  2.4958ms        14  178.27us  4.6210us  509.21us  cuMemAlloc
+ 0.00%  1.1282ms         1  1.1282ms  1.1282ms  1.1282ms  cuModuleLoadData
+ 0.00%  684.95us         1  684.95us  684.95us  684.95us  cuMemAllocHost
+ 0.00%  28.395us         9  3.1550us     282ns  24.622us  cuModuleGetFunction
+ 0.00%  24.961us         1  24.961us  24.961us  24.961us  cuStreamCreate
+ 0.00%  9.7450us         7  1.3920us     492ns  2.8770us  cuEventCreate
+ 0.00%  7.6360us         1  7.6360us  7.6360us  7.6360us  cuDeviceGetPCIBusId
+ 0.00%  5.7130us         3  1.9040us     530ns  4.5390us  cuDeviceGetAttribute
+ 0.00%  2.9200us         3     973ns     257ns  1.3390us  cuDeviceGetCount
+ 0.00%  2.7220us         2  1.3610us     678ns  2.0440us  cuDeviceGet
+ 0.00%  2.3620us         1  2.3620us  2.3620us  2.3620us  cuCtxAttach
+ 0.00%  1.0120us         1  1.0120us  1.0120us  1.0120us  cuCtxSetCurrent
+ 0.00%     996ns         2     498ns     299ns     697ns  cuCtxGetCurrent
+ 0.00%     636ns         1     636ns     636ns     636ns  cuDeviceComputeCapability

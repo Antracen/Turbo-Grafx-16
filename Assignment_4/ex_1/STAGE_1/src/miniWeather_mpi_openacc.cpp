@@ -231,7 +231,13 @@ void semi_discrete_step( double *state_init , double *state_forcing , double *st
   }
 
   //Apply the tendencies to the fluid state
-  // @wass: I added this pragma to parallelise the loop. 
+  /*
+		@wass
+		Parallelise the loop
+    Collapse the tightly nested loops into a single loop
+    Copy the variables used in the loops
+    Make sure variables in loops are private
+  */
   #pragma acc parallel loop \
               collapse(3) \
               copy(state_out[0:STATE_SIZE], state_init[0:STATE_SIZE], tend[0:TEND_SIZE]) \
@@ -258,7 +264,13 @@ void compute_tendencies_x( double *state , double *flux , double *tend ) {
   //Compute the hyperviscosity coeficient
   hv_coef = -hv_beta * dx / (16*dt);
   //Compute fluxes in the x-direction for each cell
-  // @wass: I added this pragma to parallelise the loop. Question: Why do I not need to copy in non-array variables
+  /*
+		@wass
+		Parallelise the loop
+    Collapse the tightly nested loops into a single loop
+    Copy the variables used in the loops
+    Make sure variables in loops are private
+  */
   #pragma acc parallel loop \
               collapse(2) \
               copy(state[0:STATE_SIZE], flux[0:FLUX_SIZE], hy_dens_cell[0:HYDENSCELL_SIZE], hy_dens_theta_cell[0:HYDENSTHETACELL_SIZE]) \
@@ -293,7 +305,13 @@ void compute_tendencies_x( double *state , double *flux , double *tend ) {
   }
 
   //Use the fluxes to compute tendencies for each cell
-  // @wass: I added this pragma to parallelise the loop.
+  /*
+		@wass
+		Parallelise the loop
+    Collapse the three tightly nested loops into a single loop
+    Copy the variables used in the loops
+    Make sure variables in loops are private
+  */
   #pragma acc parallel loop \
               collapse(3) \
               copy(tend[0:TEND_SIZE], flux[0:FLUX_SIZE]) \
@@ -321,7 +339,13 @@ void compute_tendencies_z( double *state , double *flux , double *tend ) {
   //Compute the hyperviscosity coeficient
   hv_coef = -hv_beta * dx / (16*dt);
   //Compute fluxes in the x-direction for each cell
-  // @wass: I added this pragma to parallelise the loop. Question: Why do I not need to copy in non-array variables
+  /*
+		@wass
+		Parallelise the loop
+    Collapse the three tightly nested loops into a single loop
+    Copy the variables used in the loops
+    Make sure variables in loops are private
+  */
   #pragma acc parallel loop \
               collapse(2) \
               copy(state[0:STATE_SIZE], flux[0:FLUX_SIZE], hy_dens_int[0:HYDENSINT_SIZE], hy_dens_theta_int[0:HYDENSTHETAINT_SIZE]) \
@@ -356,7 +380,13 @@ void compute_tendencies_z( double *state , double *flux , double *tend ) {
   }
 
   //Use the fluxes to compute tendencies for each cell
-  // @wass: I added this pragma to parallelise the loop.
+  /*
+		@wass
+		Parallelise the loop
+    Collapse the three tightly nested loops into a single loop
+    Copy the variables used in the loops
+    Make sure variables in loops are private
+  */
   #pragma acc parallel loop \
               collapse(3) \
               copy(state[0:STATE_SIZE], tend[0:TEND_SIZE], flux[0:FLUX_SIZE]) \
@@ -389,7 +419,13 @@ void set_halo_values_x( double *state ) {
   ierr = MPI_Irecv(recvbuf_r,hs*nz*NUM_VARS,MPI_DOUBLE,right_rank,1,MPI_COMM_WORLD,&req_r[1]);
 
   //Pack the send buffers
-  // @wass: I added this pragma to parallelise the loop.
+  /*
+		@wass
+		Parallelise the loop
+    Collapse the three tightly nested loops into a single loop
+    Copy the variables used in the loops
+    Make sure variables in loops are private
+  */
   #pragma acc parallel loop \
               collapse(3) \
               copy(sendbuf_l[0:SENDBUF_SIZE], sendbuf_r[0:SENDBUF_SIZE], state[0:STATE_SIZE])
@@ -412,7 +448,13 @@ void set_halo_values_x( double *state ) {
 
 
   //Unpack the receive buffers
-  // @wass: I added this pragma to parallelise the loop.
+  /*
+		@wass
+		Parallelise the loop
+    Collapse the three tightly nested loops into a single loop
+    Copy the variables used in the loops
+    Make sure variables in loops are private
+  */
   #pragma acc parallel loop \
               collapse(3) \
               copy(recvbuf_l[0:RECVBUF_SIZE], recvbuf_r[0:RECVBUF_SIZE], state[0:STATE_SIZE])
@@ -430,7 +472,13 @@ void set_halo_values_x( double *state ) {
 
   if (data_spec_int == DATA_SPEC_INJECTION) {
     if (myrank == 0) {
-      // @wass: I added this pragma to parallelise the loop.
+      /*
+        @wass
+        Parallelise the loop
+        Collapse the three tightly nested loops into a single loop
+        Copy the variables used in the loops
+        Make sure variables in loops are private
+      */
       #pragma acc parallel loop \
                   collapse(2) \
                   copy(state[0:STATE_SIZE], hy_dens_cell[0:HYDENSCELL_SIZE], hy_dens_theta_cell[0:HYDENSTHETACELL_SIZE]) \
@@ -458,7 +506,13 @@ void set_halo_values_z( double *state ) {
   int          i, ll;
   const double mnt_width = xlen/8;
   double       x, xloc, mnt_deriv;
-  // @wass: I added this pragma to parallelise the loop.
+  /*
+		@wass
+		Parallelise the loop
+    Collapse the three tightly nested loops into a single loop
+    Copy the variables used in the loops
+    Make sure variables in loops are private
+  */
   #pragma acc parallel loop \
               collapse(2) \
               copy(state[0:STATE_SIZE]) \
