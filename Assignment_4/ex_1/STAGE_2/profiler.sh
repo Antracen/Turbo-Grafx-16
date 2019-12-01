@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH -J STAGE_1
+#SBATCH -J STAGE_2
 #SBATCH -t 00:20:00
 #SBATCH -A edu19.DD2360
 #SBATCH --nodes=1
@@ -10,4 +10,4 @@
 #SBATCH --mail-user=mawass
 #SBATCH --output=output.txt
 
-mpirun -n 1 bin/miniWeather
+mpirun -n 1 nvprof bin/miniWeather

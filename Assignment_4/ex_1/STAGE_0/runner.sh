@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH -J mawass
-#SBATCH -t 00:03:00
+#SBATCH -J STAGE_0
+#SBATCH -t 00:20:00
 #SBATCH -A edu19.DD2360
 #SBATCH --nodes=1
 #SBATCH -C Haswell 

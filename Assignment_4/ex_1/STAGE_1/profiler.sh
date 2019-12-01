@@ -10,4 +10,4 @@
 #SBATCH --mail-user=mawass
 #SBATCH --output=output.txt
 
-mpirun -n 1 bin/miniWeather
+mpirun -n 1 nvprof bin/miniWeather
