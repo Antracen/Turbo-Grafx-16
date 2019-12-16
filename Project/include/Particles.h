@@ -47,9 +47,6 @@ struct particles {
     FPpart* x; FPpart*  y; FPpart* z; FPpart* u; FPpart* v; FPpart* w;
     /** q must have precision of interpolated quantities: typically double. Not used in mover */
     FPinterp* q;
-    
-    
-    
 };
 
 /** allocate particle arrays */
@@ -59,9 +56,9 @@ void particle_allocate(struct parameters*, struct particles*, int);
 void particle_deallocate(struct particles*);
 
 /** particle mover */
-int mover_PC(struct particles*, struct EMfield*, struct grid*, struct parameters*);
+int mover_PC(struct device_particle* part, struct field_pointers* field, struct grid* grd, struct parameters *param, long particles);
 
 /** Interpolation Particle --> Grid: This is for species */
-void interpP2G(struct particles*, struct interpDensSpecies*, struct grid*);
+void interpP2G(struct device_particle* part, struct ids_pointers *ids, struct grid* grd, long particles);
 
 #endif
